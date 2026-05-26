@@ -1,0 +1,16 @@
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+data/
+logs/
+*.md
+scripts/
+.DS_Store
+.vscode
+.idea

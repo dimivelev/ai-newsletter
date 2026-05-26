@@ -1,0 +1,122 @@
+# AI News Tracker Configuration
+
+# ─── Classifier provider ──────────────────────────────────────────────
+# Pick which LLM provider classifies items.
+#   anthropic — Claude API   (paid, ~$10–25/mo)
+#   openai    — OpenAI API   (paid, ~$10–25/mo)
+#   ollama    — local LLM    (free, no API key, runs on your machine)
+#   nim       — NVIDIA NIM   (OpenAI-compatible API, paid/free tier)
+provider: nim        # anthropic | openai | ollama | nim
+
+# Model name per provider — switching providers above is then one-line.
+models:
+  anthropic: claude-haiku-4-5-20251001
+  openai:    gpt-5-mini             # other picks: gpt-5-nano, gpt-4o-mini
+  ollama:    llama3.2                # or qwen2.5, mistral-small, gemma2
+  nim:       openai/gpt-oss-120b # NVIDIA NIM API model
+
+# Only used when provider=ollama. Default port for the Ollama daemon.
+ollama_base_url: http://localhost:11434/v1
+
+# Legacy fallback — only used if `models.<provider>` is missing.
+classifier_model: claude-haiku-4-5-20251001
+
+# How far back to look on each run (hours)
+lookback_hours: 24
+
+# Max items to keep per source per run (prevents runaway API costs)
+max_items_per_source: 30
+
+# Topics — must match classifier prompt labels
+topics:
+  - Frontier Models
+  - Research Papers
+  - Chips & Hardware
+  - Tools & Infra
+  - Policy & Regulation
+  - Applications
+  - Social Buzz
+
+# RSS feeds — (label, url, topic_hint)
+rss_feeds:
+  # Company blogs
+  - { name: "OpenAI", url: "https://openai.com/news/rss.xml", topic: "Frontier Models" }
+  - { name: "Anthropic", url: "https://www.anthropic.com/news/rss.xml", topic: "Frontier Models" }
+  - { name: "Google DeepMind", url: "https://deepmind.google/blog/rss.xml", topic: "Frontier Models" }
+  - { name: "Meta AI", url: "https://ai.meta.com/blog/rss/", topic: "Frontier Models" }
+  - { name: "Hugging Face", url: "https://huggingface.co/blog/feed.xml", topic: "Tools & Infra" }
+  - { name: "NVIDIA Blog", url: "https://blogs.nvidia.com/feed/", topic: "Chips & Hardware" }
+  - { name: "Microsoft Research", url: "https://www.microsoft.com/en-us/research/feed/", topic: "Research Papers" }
+  - { name: "Google Research", url: "https://research.google/blog/rss/", topic: "Research Papers" }
+  # AI news publications
+  - { name: "MIT Technology Review AI", url: "https://www.technologyreview.com/topic/artificial-intelligence/feed", topic: "Applications" }
+  - { name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", topic: "Applications" }
+  - { name: "VentureBeat AI", url: "https://venturebeat.com/category/ai/feed/", topic: "Applications" }
+  - { name: "TechCrunch AI", url: "https://techcrunch.com/category/artificial-intelligence/feed/", topic: "Applications" }
+  - { name: "Ars Technica AI", url: "https://arstechnica.com/tag/artificial-intelligence/feed/", topic: "Applications" }
+  - { name: "Import AI", url: "https://jack-clark.net/feed/", topic: "Policy & Regulation" }
+  # HN AI-filtered via hnrss.org
+  - { name: "HN: AI keyword", url: "https://hnrss.org/newest?q=AI+OR+LLM+OR+GPT+OR+Claude+OR+Gemini&points=50", topic: "Social Buzz" }
+  - { name: "HN: frontpage AI", url: "https://hnrss.org/frontpage?q=AI+OR+LLM+OR+AGI", topic: "Social Buzz" }
+
+# arXiv categories
+arxiv_categories:
+  - cs.AI
+  - cs.CL
+  - cs.LG
+  - cs.CV
+  - stat.ML
+
+# Reddit subreddits (uses .rss, no auth)
+reddit_subs:
+  - { name: "r/MachineLearning", sub: "MachineLearning", topic: "Research Papers" }
+  - { name: "r/LocalLLaMA", sub: "LocalLLaMA", topic: "Tools & Infra" }
+  - { name: "r/singularity", sub: "singularity", topic: "Social Buzz" }
+  - { name: "r/OpenAI", sub: "OpenAI", topic: "Frontier Models" }
+  - { name: "r/artificial", sub: "artificial", topic: "Applications" }
+
+# Bluesky accounts to track (AT Protocol public firehose, no auth)
+# Use resolveHandle via bsky.app to verify these exist before adding.
+bluesky_handles:
+  - emilymbender.bsky.social
+  - karpathy.bsky.social
+  - simonw.bsky.social
+  - drjimfan.bsky.social
+  - aiexplained.bsky.social
+  - timnitgebru.bsky.social
+
+# X/Twitter handles — requires RSSHub instance (see scripts/setup_rsshub.md)
+# Leave rsshub_url empty to skip X collection
+rsshub_url: ""  # e.g. "http://localhost:1200"
+x_handles:
+  - OpenAI
+  - AnthropicAI
+  - GoogleDeepMind
+  - sama
+  - demishassabis
+  - elonmusk
+  - ylecun
+  - karpathy
+  - nvidia
+  - Meta
+  - MistralAI
+
+# Importance keywords (used as signal in classifier prompt)
+high_signal_keywords:
+  - release
+  - launch
+  - announces
+  - breakthrough
+  - state-of-the-art
+  - SOTA
+  - benchmark
+  - GPT-
+  - Claude
+  - Gemini
+  - Llama
+  - acquires
+  - acquisition
+  - funding
+  - regulation
+  - safety
+  - AGI

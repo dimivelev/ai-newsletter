@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ainews.web</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/linavarbanova/Documents/claude_code_folder/ai-news-tracker/.venv/bin/python</string>
+        <string>-m</string>
+        <string>uvicorn</string>
+        <string>web.app:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>8765</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/linavarbanova/Documents/claude_code_folder/ai-news-tracker</string>
+
+    <!-- Always running; restart on crash -->
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Throttle restarts so a crash loop doesn't spin -->
+    <key>ThrottleInterval</key>
+    <integer>15</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/linavarbanova/Documents/claude_code_folder/ai-news-tracker/logs/web.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/linavarbanova/Documents/claude_code_folder/ai-news-tracker/logs/web.err.log</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

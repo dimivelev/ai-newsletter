@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>The AI Dispatch</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  {% if inline_css %}<style>{{ inline_css|safe }}</style>{% else %}<link rel="stylesheet" href="/static/style.css?v=20260509-cool-2"/>{% endif %}
+</head>
+<body>
+
+{% set today = last_run["finished_at"] or last_run["started_at"] if last_run else "" %}
+{% set is_export = mode == "export" %}
+
+<div class="cta-banner">
+  <div class="copy">
+    {% if is_export %}A snapshot from{% else %}From{% endif %} <strong>The AI Value Playbook</strong> · weekly newsletter on shipping AI that creates real value
+  </div>
+  <a class="cta" href="https://www.linkedin.com/newsletters/the-ai-value-playbook-7457782473419026432/" target="_blank" rel="noopener">
+    Subscribe on LinkedIn <span class="arrow">→</span>
+  </a>
+</div>
+
+<header class="masthead">
+  <h1><span class="ai">The AI</span> <span class="slash">·</span> Dispatch</h1>
+  <div class="edition">
+    {% if last_run %}
+      <div><span class="live">Live</span> &nbsp; <strong>{{ today[:10] }}</strong> · {{ today[11:16] }} UTC</div>
+      <div>Vol. 01 · {% if is_export %}Sample issue{% else %}Local feed{% endif %}</div>
+      <div>{{ last_run["items_new"] }} new of {{ last_run["items_found"] }} surveyed</div>
+      {% if not is_export %}<div>Refreshes every 3 hours</div>{% endif %}
+    {% else %}
+      <div>No data yet</div>
+    {% endif %}
+  </div>
+</header>
+
+<section class="stats">
+  <div class="stat">
+    <div class="num">{{ total_today }}</div>
+    <div class="lbl">Items <strong>today</strong></div>
+  </div>
+  <div class="stat major">
+    <div class="num">{{ grouped[3]|length }}</div>
+    <div class="lbl">Major · {{ hours }}h</div>
+  </div>
+  <div class="stat notable">
+    <div class="num">{{ grouped[2]|length }}</div>
+    <div class="lbl">Notable · {{ hours }}h</div>
+  </div>
+  <div class="stat routine">
+    <div class="num">{{ grouped[1]|length + grouped[None]|length }}</div>
+    <div class="lbl">Routine · {{ hours }}h</div>
+  </div>
+  <div class="stat spark">
+    <div class="lbl">Volume · 14d</div>
+    {% set maxn = (daily | map(attribute=1) | max) or 1 %}
+    {% set today_str = today[:10] if today else "" %}
+    <div class="bars">
+      {% for d, n in daily|reverse %}
+        <div class="bar {% if d == today_str %}today{% endif %}"
+             style="height: {{ ((n / maxn) * 100) | round }}%"
+             title="{{ d }}: {{ n }}"></div>
+      {% endfor %}
+    </div>
+    <div class="legend">
+      <span>{{ daily[-1][0][5:] if daily else "" }}</span>
+      <span>{{ daily[0][0][5:] if daily else "" }}</span>
+    </div>
+  </div>
+</section>
+
+<nav class="section-nav">
+  <div class="tabs">
+    {% for t in topics %}
+      {% if is_export %}
+        <button data-topic="{{ t }}" class="{% if t == active_topic %}active{% endif %}">{{ t }}{% if t != "All" and topic_cnt.get(t) %}<span class="ct">{{ topic_cnt[t] }}</span>{% endif %}</button>
+      {% else %}
+        <a href="/?topic={{ t|urlencode }}&hours={{ hours }}" class="{% if t == active_topic %}active{% endif %}">{{ t }}{% if t != "All" and topic_cnt.get(t) %}<span class="ct">{{ topic_cnt[t] }}</span>{% endif %}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if not is_export %}
+  <div class="window">
+    <span class="lbl">Window</span>
+    {% for h in [24, 48, 72, 168] %}
+      <a href="/?topic={{ active_topic|urlencode }}&hours={{ h }}"
+         class="{% if h == hours %}active{% endif %}">{{ h }}h</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</nav>
+
+<main class="page">
+  {% set meta = {
+    3: ('major', '01', 'Major'),
+    2: ('notable', '02', 'Notable'),
+    1: ('routine', '03', 'Routine'),
+    None: ('unclassified', '04', 'Unclassified')
+  } %}
+
+  {% for level in [3, 2, 1, None] %}
+    {% if grouped[level] %}
+    {% set m = meta[level] %}
+    <section class="bucket {{ m[0] }}" data-bucket="{{ level }}">
+      <header class="bucket-head">
+        <div class="left">
+          <div class="marker">{{ m[1] }} ·</div>
+          <div class="label">{{ m[2] }}</div>
+        </div>
+        <div class="count">{{ grouped[level]|length }} {% if grouped[level]|length == 1 %}entry{% else %}entries{% endif %}</div>
+      </header>
+      <ul class="items">
+        {% for it in grouped[level] %}
+        <li data-topic="{{ it['topic'] or 'Unclassified' }}">
+          <div class="stamp">
+            <span class="date">{{ it['published_at'][5:10] }}</span>
+            <span class="time">{{ it['published_at'][11:16] }} UTC</span>
+            <span class="type">{{ it['source_type'] }}</span>
+          </div>
+          <div class="body">
+            <a href="{{ it['url'] }}" target="_blank" rel="noopener" class="title">{{ it['title'] }}</a>
+            <div class="meta">
+              <span class="src">{{ it['source'] }}</span>
+              {% if it['topic'] %}<span class="topic">{{ it['topic'] }}</span>{% endif %}
+            </div>
+            {% if it['tldr'] %}<p class="tldr">{{ it['tldr'] }}</p>{% endif %}
+          </div>
+          {% if it['importance_why'] %}
+          <div class="why">{{ it['importance_why'] }}</div>
+          {% else %}
+          <div class="why empty"></div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  {% endfor %}
+
+  {% if not grouped[3] and not grouped[2] and not grouped[1] and not grouped[None] %}
+    <p class="empty">— the wires are quiet —</p>
+  {% endif %}
+</main>
+
+<aside class="byline">
+  Curated by
+  <a href="https://www.linkedin.com/in/lina-varbanova-mba-12a89b17/" target="_blank" rel="noopener">Lina Varbanova</a>
+  &nbsp;·&nbsp; built with Python, FastAPI &amp; SQLite.
+</aside>
+
+<footer class="colophon">
+  <span><strong>The AI Dispatch</strong> · {% if is_export %}Static export{% else %}Local feed{% endif %}</span>
+  <span>Sources <span class="sage">RSS · arXiv · Bluesky · HN · Reddit</span></span>
+  <span>{{ today[:10] if today else "—" }}</span>
+</footer>
+
+{% if is_export %}
+<script>
+(function () {
+  const tabs = document.querySelectorAll('.section-nav .tabs button');
+  tabs.forEach(t => t.addEventListener('click', () => {
+    const topic = t.dataset.topic;
+    tabs.forEach(x => x.classList.toggle('active', x === t));
+    document.querySelectorAll('.items li').forEach(li => {
+      li.style.display = (topic === 'All' || li.dataset.topic === topic) ? '' : 'none';
+    });
+    document.querySelectorAll('.bucket').forEach(b => {
+      const visible = [...b.querySelectorAll('.items li')].some(li => li.style.display !== 'none');
+      b.style.display = visible ? '' : 'none';
+    });
+  }));
+})();
+</script>
+{% endif %}
+
+</body>
+</html>
