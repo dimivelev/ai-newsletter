@@ -27,7 +27,13 @@
       <div><span class="live">Live</span> &nbsp; <strong>{{ today[:10] }}</strong> · {{ today[11:16] }} UTC</div>
       <div>Vol. 01 · {% if is_export %}Sample issue{% else %}Local feed{% endif %}</div>
       <div>{{ last_run["items_new"] }} new of {{ last_run["items_found"] }} surveyed</div>
-      {% if not is_export %}<div>Refreshes every 3 hours</div>{% endif %}
+      {% if not is_export %}
+        <div>Refreshes every 3 hours</div>
+        <div class="export-actions">
+          <a href="/api/export/digest?format=markdown&hours={{ hours }}&topic={{ active_topic|urlencode }}&q={{ q|urlencode }}&sources={{ sources|urlencode }}" class="btn-export" title="Export view as Markdown">Export MD</a>
+          <a href="/api/export/digest?format=html&hours={{ hours }}&topic={{ active_topic|urlencode }}&q={{ q|urlencode }}&sources={{ sources|urlencode }}" class="btn-export" title="Export view as HTML">Export HTML</a>
+        </div>
+      {% endif %}
     {% else %}
       <div>No data yet</div>
     {% endif %}

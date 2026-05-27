@@ -82,6 +82,47 @@ def delete_bookmark(item_id: int):
     return {"ok": True}
 
 
+@app.get("/api/export/digest")
+def export_digest(
+    format: str,
+    hours: int = 168,
+    topic: str = "All",
+    q: str = "",
+    sources: str = "",
+    min_importance: int = 2
+):
+    from fastapi import Response, HTTPException
+    from storage import exporter
+    active_sources = [s.strip() for s in sources.split(",") if s.strip()] if sources else []
+    
+    if format == "markdown":
+        content = exporter.generate_markdown_digest(
+            since_hours=hours, min_importance=min_importance, topic=topic, q=q, sources=active_sources
+        )
+        media_type = "text/markdown"
+        ext = "md"
+    elif format == "html":
+        content = exporter.generate_html_digest(
+            since_hours=hours, min_importance=min_importance, topic=topic, q=q, sources=active_sources
+        )
+        media_type = "text/html"
+        ext = "html"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid format. Choose 'markdown' or 'html'.")
+        
+    date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    filename = f"digest_{date_str}.{ext}"
+    
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": f"{media_type}; charset=utf-8"
+        }
+    )
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "last_run": dict(db.last_run()) if db.last_run() else None}

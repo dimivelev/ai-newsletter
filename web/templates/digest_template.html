@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The AI Dispatch - Digest</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --fg: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --violet: #7c3aed;
+      --teal: #0d9488;
+      --amber: #f59e0b;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+    .header h1 span {
+      color: var(--violet);
+    }
+    .header .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .section {
+      margin-bottom: 36px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .section.major .section-title {
+      color: var(--violet);
+      border-bottom-color: var(--violet);
+    }
+    .section.notable .section-title {
+      color: var(--teal);
+      border-bottom-color: var(--teal);
+    }
+    .section.routine .section-title {
+      color: var(--fg);
+    }
+    .items {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .item {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .item-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 6px 0;
+    }
+    .item-title a {
+      color: var(--fg);
+      text-decoration: none;
+    }
+    .item-title a:hover {
+      color: var(--violet);
+      text-decoration: underline;
+    }
+    .item-meta {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-family: monospace;
+    }
+    .item-meta .src {
+      color: var(--violet);
+      font-weight: bold;
+    }
+    .item-meta .sep {
+      margin: 0 6px;
+      color: var(--border);
+    }
+    .item-tldr {
+      background: var(--bg);
+      border-left: 3px solid var(--violet);
+      padding: 10px 16px;
+      margin: 0 0 12px 0;
+      font-style: italic;
+      color: #334155;
+      font-size: 14px;
+    }
+    .section.notable .item-tldr {
+      border-left-color: var(--teal);
+    }
+    .item-why {
+      font-size: 12px;
+      color: var(--fg);
+      font-weight: 500;
+    }
+    .item-why span {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-right: 6px;
+    }
+    .footer {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin-top: 32px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1><span>The AI</span> Dispatch</h1>
+    <div class="meta">
+      Digest · Generated {{ now }} UTC <br>
+      Topic: {{ topic }} · Lookback: {{ since_hours }}h
+      {% if q %}· Search: "{{ q }}"{% endif %}
+      {% if sources %}· Sources: {{ sources|join(', ') }}{% endif %}
+    </div>
+  </div>
+
+  {% if total_items == 0 %}
+    <div class="empty-state">
+      — No items found matching the filter criteria —
+    </div>
+  {% else %}
+    {% set labels = {
+      3: ('🔥 Major Announcements', 'major'),
+      2: ('⭐ Notable News', 'notable'),
+      1: ('📰 Routine Updates', 'routine')
+    } %}
+
+    {% for level in [3, 2, 1] %}
+      {% set items = grouped.get(level, []) %}
+      {% if items %}
+        {% set label = labels[level] %}
+        <div class="section {{ label[1] }}">
+          <div class="section-title">
+            <span>{{ label[0] }}</span>
+            <span style="font-size: 12px; color: var(--muted); font-weight: normal;">{{ items|length }} {{ 'entry' if items|length == 1 else 'entries' }}</span>
+          </div>
+          <ul class="items">
+            {% for it in items %}
+              <li class="item">
+                <h3 class="item-title">
+                  <a href="{{ it['url'] }}" target="_blank" rel="noopener">{{ it['title'] }}</a>
+                </h3>
+                <div class="item-meta">
+                  <span class="src">{{ it['source'] }}</span>
+                  <span class="sep">|</span>
+                  <span>{{ it['source_type']|upper }}</span>
+                  <span class="sep">|</span>
+                  <span>{{ it['published_at'][:16]|replace('T', ' ') }} UTC</span>
+                </div>
+                {% if it['tldr'] %}
+                  <blockquote class="item-tldr">{{ it['tldr'] }}</blockquote>
+                {% endif %}
+                {% if it['importance_why'] %}
+                  <div class="item-why">
+                    <span>Why it matters:</span>{{ it['importance_why'] }}
+                  </div>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  <div class="footer">
+    Sent via local <strong>AI News Tracker</strong>. built with Python, FastAPI &amp; SQLite.
+  </div>
+</div>
+
+</body>
+</html>
