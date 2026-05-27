@@ -16,6 +16,8 @@ sys.path.insert(0, str(ROOT))
 
 from storage import db  # noqa: E402
 
+db.init_db()
+
 app = FastAPI(title="AI News Tracker")
 templates = Jinja2Templates(directory=str(ROOT / "web" / "templates"))
 app.mount("/static", StaticFiles(directory=str(ROOT / "web" / "static")), name="static")
@@ -36,12 +38,16 @@ def group_by_importance(rows) -> dict:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, topic: str = "All", hours: int = 168):
     topics = load_topics()
-    rows = db.fetch_items(topic=topic, since_hours=hours, limit=500)
+    if topic == "Bookmarked":
+        rows = db.fetch_bookmarked_items()
+    else:
+        rows = db.fetch_items(topic=topic, since_hours=hours, limit=500)
     grouped = group_by_importance(rows)
     daily = db.daily_counts(days=14)
     # Tab counts reflect the selected window so users can see which tabs
     # have content without clicking through.
     topic_cnt = db.topic_counts(since_hours=hours)
+    topic_cnt["Bookmarked"] = db.count_bookmarks()
     last = db.last_run()
     total_today = sum(n for d, n in daily if d == datetime.utcnow().strftime("%Y-%m-%d"))
 
@@ -49,7 +55,7 @@ def index(request: Request, topic: str = "All", hours: int = 168):
         request,
         "index.html",
         {
-            "topics": ["All"] + topics,
+            "topics": ["All"] + topics + ["Bookmarked"],
             "active_topic": topic,
             "hours": hours,
             "grouped": grouped,
@@ -59,6 +65,18 @@ def index(request: Request, topic: str = "All", hours: int = 168):
             "total_today": total_today,
         },
     )
+
+
+@app.post("/api/bookmarks/{item_id}")
+def add_bookmark(item_id: int):
+    db.add_bookmark(item_id)
+    return {"ok": True}
+
+
+@app.delete("/api/bookmarks/{item_id}")
+def delete_bookmark(item_id: int):
+    db.remove_bookmark(item_id)
+    return {"ok": True}
 
 
 @app.get("/health")

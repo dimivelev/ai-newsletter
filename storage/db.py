@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS runs (
     items_new       INTEGER DEFAULT 0,
     errors          TEXT
 );
+
+CREATE TABLE IF NOT EXISTS bookmarks (
+    item_id         INTEGER PRIMARY KEY,
+    created_at      TEXT NOT NULL,
+    FOREIGN KEY(item_id) REFERENCES items(id) ON DELETE CASCADE
+);
 """
 
 
@@ -113,13 +119,15 @@ def fetch_unclassified(limit: int = 100) -> list[sqlite3.Row]:
 
 def fetch_items(topic: Optional[str] = None, since_hours: int = 168,
                 limit: int = 200) -> list[sqlite3.Row]:
-    sql = """SELECT * FROM items
-             WHERE datetime(published_at) >= datetime('now', ?)"""
+    sql = """SELECT items.*, (bookmarks.item_id IS NOT NULL) AS is_bookmarked
+             FROM items
+             LEFT JOIN bookmarks ON items.id = bookmarks.item_id
+             WHERE datetime(items.published_at) >= datetime('now', ?)"""
     params: list = [f"-{since_hours} hours"]
     if topic and topic != "All":
-        sql += " AND topic = ?"
+        sql += " AND items.topic = ?"
         params.append(topic)
-    sql += " ORDER BY importance DESC NULLS LAST, published_at DESC LIMIT ?"
+    sql += " ORDER BY items.importance DESC NULLS LAST, items.published_at DESC LIMIT ?"
     params.append(limit)
     with conn() as con:
         return con.execute(sql, params).fetchall()
@@ -171,3 +179,33 @@ def last_run() -> Optional[sqlite3.Row]:
         return con.execute(
             "SELECT * FROM runs ORDER BY id DESC LIMIT 1"
         ).fetchone()
+
+
+def add_bookmark(item_id: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    with conn() as con:
+        con.execute(
+            "INSERT OR IGNORE INTO bookmarks (item_id, created_at) VALUES (?, ?)",
+            (item_id, now),
+        )
+
+
+def remove_bookmark(item_id: int) -> None:
+    with conn() as con:
+        con.execute("DELETE FROM bookmarks WHERE item_id = ?", (item_id,))
+
+
+def count_bookmarks() -> int:
+    with conn() as con:
+        row = con.execute("SELECT COUNT(*) FROM bookmarks").fetchone()
+        return row[0] if row else 0
+
+
+def fetch_bookmarked_items() -> list[sqlite3.Row]:
+    with conn() as con:
+        return con.execute(
+            """SELECT items.*, 1 AS is_bookmarked
+               FROM items
+               INNER JOIN bookmarks ON items.id = bookmarks.item_id
+               ORDER BY bookmarks.created_at DESC"""
+        ).fetchall()

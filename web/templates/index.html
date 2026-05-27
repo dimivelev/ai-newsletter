@@ -118,7 +118,14 @@
             <span class="type">{{ it['source_type'] }}</span>
           </div>
           <div class="body">
-            <a href="{{ it['url'] }}" target="_blank" rel="noopener" class="title">{{ it['title'] }}</a>
+            <div class="title-row">
+              <button class="bookmark-btn {% if it['is_bookmarked'] %}active{% endif %}" data-id="{{ it['id'] }}" title="Bookmark this item">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              </button>
+              <a href="{{ it['url'] }}" target="_blank" rel="noopener" class="title">{{ it['title'] }}</a>
+            </div>
             <div class="meta">
               <span class="src">{{ it['source'] }}</span>
               {% if it['topic'] %}<span class="topic">{{ it['topic'] }}</span>{% endif %}
@@ -170,6 +177,77 @@
     });
   }));
 })();
+</script>
+{% else %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const isBookmarkedTab = new URLSearchParams(window.location.search).get('topic') === 'Bookmarked';
+
+  document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const itemId = btn.dataset.id;
+      const isActive = btn.classList.contains('active');
+      
+      const url = `/api/bookmarks/${itemId}`;
+      const method = isActive ? 'DELETE' : 'POST';
+      
+      try {
+        const resp = await fetch(url, { method });
+        if (resp.ok) {
+          btn.classList.toggle('active', !isActive);
+          
+          // Update bookmark counts in tab badge
+          const bookmarkTabs = document.querySelectorAll('.section-nav .tabs a');
+          bookmarkTabs.forEach(tab => {
+            if (tab.textContent.includes('Bookmarked')) {
+              let badge = tab.querySelector('.ct');
+              let count = badge ? parseInt(badge.textContent, 10) : 0;
+              count = isActive ? Math.max(0, count - 1) : count + 1;
+              
+              if (count > 0) {
+                if (!badge) {
+                  badge = document.createElement('span');
+                  badge.className = 'ct';
+                  tab.appendChild(badge);
+                }
+                badge.textContent = count;
+              } else if (badge) {
+                badge.remove();
+              }
+            }
+          });
+
+          // Animation for bookmarked tab removal
+          if (isBookmarkedTab && isActive) {
+            const li = btn.closest('li');
+            li.classList.add('fade-out');
+            li.addEventListener('animationend', () => {
+              const ul = li.parentNode;
+              const section = li.closest('.bucket');
+              li.remove();
+              
+              // If the bucket is empty, remove the bucket
+              if (ul && ul.querySelectorAll('li').length === 0 && section) {
+                section.remove();
+              }
+              
+              // If there are no items left in any buckets, show the empty state
+              if (document.querySelectorAll('.items li').length === 0) {
+                const main = document.querySelector('main.page');
+                if (main) {
+                  main.innerHTML = '<p class="empty">— the wires are quiet —</p>';
+                }
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to toggle bookmark', err);
+      }
+    });
+  });
+});
 </script>
 {% endif %}
 
