@@ -118,7 +118,8 @@ def fetch_unclassified(limit: int = 100) -> list[sqlite3.Row]:
 
 
 def fetch_items(topic: Optional[str] = None, since_hours: int = 168,
-                limit: int = 200) -> list[sqlite3.Row]:
+                limit: int = 200, q: Optional[str] = None,
+                sources: Optional[list[str]] = None) -> list[sqlite3.Row]:
     sql = """SELECT items.*, (bookmarks.item_id IS NOT NULL) AS is_bookmarked
              FROM items
              LEFT JOIN bookmarks ON items.id = bookmarks.item_id
@@ -127,6 +128,14 @@ def fetch_items(topic: Optional[str] = None, since_hours: int = 168,
     if topic and topic != "All":
         sql += " AND items.topic = ?"
         params.append(topic)
+    if q:
+        sql += " AND (items.title LIKE ? OR items.tldr LIKE ? OR items.summary LIKE ?)"
+        q_wildcard = f"%{q}%"
+        params.extend([q_wildcard, q_wildcard, q_wildcard])
+    if sources:
+        placeholders = ", ".join("?" for _ in sources)
+        sql += f" AND items.source_type IN ({placeholders})"
+        params.extend(sources)
     sql += " ORDER BY items.importance DESC NULLS LAST, items.published_at DESC LIMIT ?"
     params.append(limit)
     with conn() as con:
@@ -145,14 +154,22 @@ def daily_counts(days: int = 14) -> list[tuple[str, int]]:
     return [(r["d"], r["n"]) for r in rows]
 
 
-def topic_counts(since_hours: int = 24) -> dict[str, int]:
+def topic_counts(since_hours: int = 24, q: Optional[str] = None,
+                 sources: Optional[list[str]] = None) -> dict[str, int]:
+    sql = """SELECT topic, COUNT(*) AS n FROM items
+             WHERE datetime(published_at) >= datetime('now', ?)"""
+    params: list = [f"-{since_hours} hours"]
+    if q:
+        sql += " AND (title LIKE ? OR tldr LIKE ? OR summary LIKE ?)"
+        q_wildcard = f"%{q}%"
+        params.extend([q_wildcard, q_wildcard, q_wildcard])
+    if sources:
+        placeholders = ", ".join("?" for _ in sources)
+        sql += f" AND source_type IN ({placeholders})"
+        params.extend(sources)
+    sql += " GROUP BY topic"
     with conn() as con:
-        rows = con.execute(
-            """SELECT topic, COUNT(*) AS n FROM items
-               WHERE datetime(published_at) >= datetime('now', ?)
-               GROUP BY topic""",
-            (f"-{since_hours} hours",),
-        ).fetchall()
+        rows = con.execute(sql, params).fetchall()
     return {r["topic"] or "Unclassified": r["n"] for r in rows}
 
 
@@ -195,17 +212,40 @@ def remove_bookmark(item_id: int) -> None:
         con.execute("DELETE FROM bookmarks WHERE item_id = ?", (item_id,))
 
 
-def count_bookmarks() -> int:
+def count_bookmarks(q: Optional[str] = None,
+                    sources: Optional[list[str]] = None) -> int:
+    sql = """SELECT COUNT(*) FROM bookmarks
+             INNER JOIN items ON bookmarks.item_id = items.id
+             WHERE 1=1"""
+    params: list = []
+    if q:
+        sql += " AND (items.title LIKE ? OR items.tldr LIKE ? OR items.summary LIKE ?)"
+        q_wildcard = f"%{q}%"
+        params.extend([q_wildcard, q_wildcard, q_wildcard])
+    if sources:
+        placeholders = ", ".join("?" for _ in sources)
+        sql += f" AND items.source_type IN ({placeholders})"
+        params.extend(sources)
     with conn() as con:
-        row = con.execute("SELECT COUNT(*) FROM bookmarks").fetchone()
+        row = con.execute(sql, params).fetchone()
         return row[0] if row else 0
 
 
-def fetch_bookmarked_items() -> list[sqlite3.Row]:
+def fetch_bookmarked_items(q: Optional[str] = None,
+                           sources: Optional[list[str]] = None) -> list[sqlite3.Row]:
+    sql = """SELECT items.*, 1 AS is_bookmarked
+             FROM items
+             INNER JOIN bookmarks ON items.id = bookmarks.item_id
+             WHERE 1=1"""
+    params: list = []
+    if q:
+        sql += " AND (items.title LIKE ? OR items.tldr LIKE ? OR items.summary LIKE ?)"
+        q_wildcard = f"%{q}%"
+        params.extend([q_wildcard, q_wildcard, q_wildcard])
+    if sources:
+        placeholders = ", ".join("?" for _ in sources)
+        sql += f" AND items.source_type IN ({placeholders})"
+        params.extend(sources)
+    sql += " ORDER BY bookmarks.created_at DESC"
     with conn() as con:
-        return con.execute(
-            """SELECT items.*, 1 AS is_bookmarked
-               FROM items
-               INNER JOIN bookmarks ON items.id = bookmarks.item_id
-               ORDER BY bookmarks.created_at DESC"""
-        ).fetchall()
+        return con.execute(sql, params).fetchall()

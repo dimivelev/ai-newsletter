@@ -34,6 +34,34 @@
   </div>
 </header>
 
+<form id="filter-form" method="GET" class="filter-bar">
+  <input type="hidden" name="topic" value="{{ active_topic }}">
+  {% if not is_export %}
+  <input type="hidden" name="hours" value="{{ hours }}">
+  {% endif %}
+  <input type="hidden" name="sources" id="sources-input" value="{{ sources }}">
+
+  <div class="search-wrapper">
+    <svg class="search-icon" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input type="text" name="q" id="search-input" class="search-input" placeholder="Search titles, summaries..." value="{{ q }}" autocomplete="off">
+    {% if q %}
+    <button type="button" id="clear-search" class="clear-search-btn" title="Clear search">✕</button>
+    {% endif %}
+  </div>
+
+  <div class="source-pills-wrapper">
+    <span class="pills-lbl">Sources</span>
+    <div class="source-pills">
+      {% for s_type in ['rss', 'arxiv', 'reddit', 'hn', 'bluesky', 'x'] %}
+        <button type="button" class="source-pill" data-source="{{ s_type }}">{{ s_type }}</button>
+      {% endfor %}
+    </div>
+  </div>
+</form>
+
 <section class="stats">
   <div class="stat">
     <div class="num">{{ total_today }}</div>
@@ -75,7 +103,7 @@
       {% if is_export %}
         <button data-topic="{{ t }}" class="{% if t == active_topic %}active{% endif %}">{{ t }}{% if t != "All" and topic_cnt.get(t) %}<span class="ct">{{ topic_cnt[t] }}</span>{% endif %}</button>
       {% else %}
-        <a href="/?topic={{ t|urlencode }}&hours={{ hours }}" class="{% if t == active_topic %}active{% endif %}">{{ t }}{% if t != "All" and topic_cnt.get(t) %}<span class="ct">{{ topic_cnt[t] }}</span>{% endif %}</a>
+        <a href="/?topic={{ t|urlencode }}&hours={{ hours }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if sources %}&sources={{ sources|urlencode }}{% endif %}" class="{% if t == active_topic %}active{% endif %}">{{ t }}{% if t != "All" and topic_cnt.get(t) %}<span class="ct">{{ topic_cnt[t] }}</span>{% endif %}</a>
       {% endif %}
     {% endfor %}
   </div>
@@ -83,7 +111,7 @@
   <div class="window">
     <span class="lbl">Window</span>
     {% for h in [24, 48, 72, 168] %}
-      <a href="/?topic={{ active_topic|urlencode }}&hours={{ h }}"
+      <a href="/?topic={{ active_topic|urlencode }}&hours={{ h }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if sources %}&sources={{ sources|urlencode }}{% endif %}"
          class="{% if h == hours %}active{% endif %}">{{ h }}h</a>
     {% endfor %}
   </div>
@@ -247,6 +275,46 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // Handle source pills selection
+  const sourcesInput = document.getElementById('sources-input');
+  const filterForm = document.getElementById('filter-form');
+  const activeSources = sourcesInput && sourcesInput.value ? sourcesInput.value.split(',') : [];
+
+  document.querySelectorAll('.source-pill').forEach(pill => {
+    const srcType = pill.dataset.source;
+    if (activeSources.includes(srcType)) {
+      pill.classList.add('active');
+    }
+
+    pill.addEventListener('click', () => {
+      pill.classList.toggle('active');
+      const updatedSources = [];
+      document.querySelectorAll('.source-pill.active').forEach(p => {
+        updatedSources.push(p.dataset.source);
+      });
+      if (sourcesInput) {
+        sourcesInput.value = updatedSources.join(',');
+      }
+      if (filterForm) {
+        filterForm.submit();
+      }
+    });
+  });
+
+  // Handle clear search button click
+  const clearBtn = document.getElementById('clear-search');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (filterForm) {
+        filterForm.submit();
+      }
+    });
+  }
 });
 </script>
 {% endif %}

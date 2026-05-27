@@ -36,18 +36,19 @@ def group_by_importance(rows) -> dict:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, topic: str = "All", hours: int = 168):
+def index(request: Request, topic: str = "All", hours: int = 168, q: str = "", sources: str = ""):
     topics = load_topics()
+    active_sources = [s.strip() for s in sources.split(",") if s.strip()] if sources else []
     if topic == "Bookmarked":
-        rows = db.fetch_bookmarked_items()
+        rows = db.fetch_bookmarked_items(q=q, sources=active_sources)
     else:
-        rows = db.fetch_items(topic=topic, since_hours=hours, limit=500)
+        rows = db.fetch_items(topic=topic, since_hours=hours, limit=500, q=q, sources=active_sources)
     grouped = group_by_importance(rows)
     daily = db.daily_counts(days=14)
     # Tab counts reflect the selected window so users can see which tabs
     # have content without clicking through.
-    topic_cnt = db.topic_counts(since_hours=hours)
-    topic_cnt["Bookmarked"] = db.count_bookmarks()
+    topic_cnt = db.topic_counts(since_hours=hours, q=q, sources=active_sources)
+    topic_cnt["Bookmarked"] = db.count_bookmarks(q=q, sources=active_sources)
     last = db.last_run()
     total_today = sum(n for d, n in daily if d == datetime.utcnow().strftime("%Y-%m-%d"))
 
@@ -58,6 +59,8 @@ def index(request: Request, topic: str = "All", hours: int = 168):
             "topics": ["All"] + topics + ["Bookmarked"],
             "active_topic": topic,
             "hours": hours,
+            "q": q,
+            "sources": sources,
             "grouped": grouped,
             "daily": daily,
             "topic_cnt": topic_cnt,
