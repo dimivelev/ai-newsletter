@@ -195,6 +195,40 @@
   <span>{{ today[:10] if today else "—" }}</span>
 </footer>
 
+{% if not is_export %}
+<!-- Chat Toggle Button -->
+<button id="chat-toggle" class="chat-toggle-btn" title="Ask AI Assistant">
+  <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+</button>
+
+<!-- Chat Drawer Panel -->
+<div id="chat-drawer" class="chat-drawer">
+  <div class="chat-header">
+    <div class="chat-title">
+      <svg class="chat-header-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+      <span>Dispatch Assistant</span>
+    </div>
+    <div class="chat-header-actions">
+      <button id="chat-clear" class="chat-action-btn" title="Clear conversation">🗑️</button>
+      <button id="chat-close" class="chat-action-btn" title="Close drawer">✕</button>
+    </div>
+  </div>
+  
+  <div id="chat-messages" class="chat-messages">
+    <div class="chat-msg msg-ai">
+      Hello! I'm your AI Dispatch assistant. You can ask me questions about the latest articles, research papers, or newsletter content in your feed. I'll search and reference sources factually.
+    </div>
+  </div>
+  
+  <form id="chat-form" class="chat-form">
+    <input type="text" id="chat-input" class="chat-input" placeholder="Ask about recent news..." autocomplete="off" required>
+    <button type="submit" id="chat-send" class="chat-send-btn">
+      <svg viewBox="0 0 24 24"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+    </button>
+  </form>
+</div>
+{% endif %}
+
 {% if is_export %}
 <script>
 (function () {
@@ -321,9 +355,121 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Chat Drawer Functionality
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatDrawer = document.getElementById('chat-drawer');
+  const chatClose = document.getElementById('chat-close');
+  const chatClear = document.getElementById('chat-clear');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+
+  let chatHistory = [];
+
+  function formatMarkdown(text) {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function appendMessage(role, content) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg msg-${role}`;
+    msgDiv.innerHTML = formatMarkdown(content);
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  if (chatToggle && chatDrawer) {
+    chatToggle.addEventListener('click', () => {
+      chatDrawer.classList.toggle('open');
+      if (chatDrawer.classList.contains('open')) {
+        chatInput.focus();
+      }
+    });
+
+    chatClose.addEventListener('click', () => {
+      chatDrawer.classList.remove('open');
+    });
+
+    chatClear.addEventListener('click', () => {
+      if (confirm('Clear chat history?')) {
+        chatMessages.innerHTML = `
+          <div class="chat-msg msg-ai">
+            Hello! I'm your AI Dispatch assistant. You can ask me questions about the latest articles, research papers, or newsletter content in your feed. I'll search and reference sources factually.
+          </div>
+        `;
+        chatHistory = [];
+      }
+    });
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      // Add user message
+      appendMessage('user', text);
+      chatHistory.push({ role: 'user', content: text });
+      chatInput.value = '';
+
+      // Disable inputs during search
+      chatInput.disabled = true;
+      chatSend.disabled = true;
+
+      // Add typing indicator
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'chat-msg msg-ai typing-indicator';
+      typingDiv.innerHTML = '<span>.</span><span>.</span><span>.</span>';
+      chatMessages.appendChild(typingDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ messages: chatHistory }),
+        });
+
+        // Remove typing indicator
+        if (typingDiv.parentNode) {
+          typingDiv.remove();
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          const reply = data.content;
+          appendMessage('ai', reply);
+          chatHistory.push({ role: 'assistant', content: reply });
+        } else {
+          appendMessage('ai', '⚠️ Error: Failed to generate response. Please try again.');
+        }
+      } catch (err) {
+        if (typingDiv && typingDiv.parentNode) {
+          typingDiv.remove();
+        }
+        appendMessage('ai', '⚠️ Error: Network failure or backend server offline.');
+        console.error(err);
+      } finally {
+        chatInput.disabled = false;
+        chatSend.disabled = false;
+        chatInput.focus();
+      }
+    });
+  }
 });
 </script>
 {% endif %}
 
 </body>
 </html>
+

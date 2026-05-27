@@ -82,6 +82,39 @@ def delete_bookmark(item_id: int):
     return {"ok": True}
 
 
+from pydantic import BaseModel
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+
+def load_config() -> dict:
+    with open(ROOT / "config.yaml") as f:
+        return yaml.safe_load(f)
+
+@app.post("/api/chat")
+def chat_endpoint(payload: ChatRequest):
+    import storage.chat as chat
+    from fastapi import HTTPException
+    
+    if not payload.messages:
+        raise HTTPException(status_code=400, detail="Messages list cannot be empty.")
+    
+    last_msg = payload.messages[-1]
+    if last_msg.role != "user":
+        raise HTTPException(status_code=400, detail="Last message must be from user.")
+        
+    query = last_msg.content
+    chat_history = [{"role": m.role, "content": m.content} for m in payload.messages[:-1]]
+    
+    cfg = load_config()
+    reply = chat.answer_question(query, chat_history, cfg)
+    return {"content": reply}
+
+
 @app.get("/api/export/digest")
 def export_digest(
     format: str,

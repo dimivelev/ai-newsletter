@@ -88,6 +88,9 @@ class BaseClassifier(ABC):
         """Call the LLM and return the raw response text."""
         ...
 
+    def generate_response(self, system: str, user: str) -> str:
+        return self._call(system, user)
+
     def classify_batch(self, items: Sequence[dict], topics: list[str],
                        batch_size: int = 10) -> list[dict]:
         results: list[dict] = []
