@@ -32,16 +32,21 @@ log = logging.getLogger(__name__)
 SYSTEM_PROMPT = """You are an AI news triage analyst. For each item you receive,
 output a JSON object with:
   "topic": one of {topics}
-  "importance": 1 (routine), 2 (notable), 3 (major breakthrough or big announcement)
+  "importance": 1 (routine), 2 (notable), 3 (major)
   "why": <= 15 words explaining the importance score
   "tldr": <= 25-word plain-English summary for a busy exec
 
-Rules for importance:
- - 3 = new major model release, major funding/acquisition, regulation with teeth,
-       breakthrough benchmark, senior safety incident, chip-supply shift.
- - 2 = notable partnership, second-tier product update, strong research paper,
-       meaningful policy debate.
- - 1 = incremental, rumor, opinion piece, minor blog post, personal take.
+Expected distribution: roughly 60% routine, 30% notable, 10% major.
+Be willing to assign 2 and 3 — this is a high-signal AI news feed, not general news.
+
+Importance guidelines:
+ - 3 (major) — new model release, major funding round ($100M+), new regulation/law,
+       breakthrough result, company acquisition, safety incident, major product launch.
+ - 2 (notable) — product update, research paper release, partnership announcement,
+       policy proposal, opinion from a major figure, funding round, benchmark result,
+       new feature from a major company, interesting analysis.
+ - 1 (routine) — minor blog post, incremental update, speculative article, personal
+       milestone, content that is mostly noise in an AI context.
 
 Return ONLY a JSON array, one object per input item, in the same order."""
 

@@ -48,6 +48,11 @@ rss_feeds:
   - { name: "NVIDIA Blog", url: "https://blogs.nvidia.com/feed/", topic: "Chips & Hardware" }
   - { name: "Microsoft Research", url: "https://www.microsoft.com/en-us/research/feed/", topic: "Research Papers" }
   - { name: "Google Research", url: "https://research.google/blog/rss/", topic: "Research Papers" }
+  - { name: "Mistral AI", url: "https://mistral.ai/news/rss.xml", topic: "Frontier Models" }
+  - { name: "Apple ML Research", url: "https://machinelearning.apple.com/rss", topic: "Research Papers" }
+  # AI newsletters
+  - { name: "TLDR AI", url: "https://tldr.tech/ai/feed", topic: "Applications" }
+  - { name: "The Neuron", url: "https://www.theneurondaily.com/feed", topic: "Applications" }
   # AI news publications
   - { name: "MIT Technology Review AI", url: "https://www.technologyreview.com/topic/artificial-intelligence/feed", topic: "Applications" }
   - { name: "The Verge AI", url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", topic: "Applications" }
